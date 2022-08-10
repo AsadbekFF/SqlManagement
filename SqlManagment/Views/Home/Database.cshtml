@@ -10,7 +10,7 @@
 <nav class="menu">
     <ul class="menu__list">
         <li>
-            <a class="menu__link">Server</a>
+            <a class="menu__link">@ViewBag.ServerInfo.ServerName</a>
             <ul class="sub-menu__list">
                 @foreach (var item in ViewBag.ServerInfo.DatabaseContents)
                 {
@@ -79,9 +79,9 @@
     }
 }
 
-@if (ViewBag.ElapsedTime != null)
+@if (ViewBag.EllapsedTime != null)
 {
-    <h6>Ellapsed time: @ViewBag.ElapsedTime.ToString() ms</h6>
+    <h6>Ellapsed time: @ViewBag.EllapsedTime ms</h6>
 }
 @if (ViewBag.Status != null)
 {

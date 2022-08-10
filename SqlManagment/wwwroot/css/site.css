@@ -88,7 +88,7 @@ body {
 
 .menu__list>li{
     margin: 0px 10px 0px 0px;
-    background-color: #ff0000;
+    background-color: #ffd800;
 }
 
 .menu__list>li:hover .sub-menu__list {

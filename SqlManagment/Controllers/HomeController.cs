@@ -15,7 +15,7 @@ namespace SqlManagment.Controllers
     {
         private readonly ILogger<HomeController> _logger;
         private static readonly List<string> dbNames = new();
-        private static string ServerName = null;
+        private static LoginPage ServerContent = null;
 
         public HomeController(ILogger<HomeController> logger)
         {
@@ -26,51 +26,44 @@ namespace SqlManagment.Controllers
         public IActionResult Login(LoginPage login)
         {
             ServerContent serverContent = new();
-            
-            if (login.LoginName == "Asadbek" && login.Password == "Asadbek2202")
+
+            try
             {
-                try
+                using (SqlConnection con = new(@$"Server={login.Server};User Id={login.LoginName};Password={login.Password};"))
                 {
-                    using (SqlConnection con = new(@$"Server={login.Server};Trusted_Connection=True;"))
+                    con.Open();
+                    using (SqlCommand cmd = new("SELECT name from sys.databases", con))
                     {
-                        con.Open();
-                        ServerName = login.Server;
-                        using (SqlCommand cmd = new("SELECT name from sys.databases", con))
+                        using (SqlDataReader dr = cmd.ExecuteReader())
                         {
-                            using (SqlDataReader dr = cmd.ExecuteReader())
+                            for (int i = 0; i < 4; i++)
                             {
-                                for (int i = 0; i < 5; i++)
-                                {
-                                    dr.Read();
-                                }
-                                while (dr.Read())
-                                {
-                                    dbNames.Add(dr[0].ToString());
-                                }
+                                dr.Read();
+                            }
+                            while (dr.Read())
+                            {
+                                dbNames.Add(dr[0].ToString());
                             }
                         }
-
                     }
-                }
-                catch (Exception)
-                {
-                    return Error();
-                }
-                serverContent = GetAllDataFromServer(login.Server);
+                    ServerContent = login;
 
-                ViewData["ServerInfo"] = serverContent;
-                ViewData["Data"] = null;
-                return View("Database");
+                }
             }
-            else
+            catch (Exception)
             {
-                return View("Index");
+                return Error();
             }
+            serverContent = GetAllDataFromServer(ServerContent);
+
+            ViewData["ServerInfo"] = serverContent;
+            ViewData["Data"] = null;
+            return View("Database");
         }
         #endregion
 
         #region Retrieving all databases, tables, columns names from the server
-        private static ServerContent GetAllDataFromServer(string loginServerName)
+        private static ServerContent GetAllDataFromServer(LoginPage serverInfo)
         {
             List<DatabaseContent> databaseContents = new();
             ServerContent serverContent;
@@ -78,7 +71,7 @@ namespace SqlManagment.Controllers
             {
                 List<DatabaseColumnsNames> columnsNames = new();
                 List<string> tables = new();
-                SqlConnection connection = new(@$"Server={loginServerName};Database={item};Trusted_Connection=True;");
+                SqlConnection connection = new(@$"Server={serverInfo.Server};Database={item};User Id={serverInfo.LoginName};Password={serverInfo.Password};");
                 connection.Open();
                 using SqlCommand cmd = new($"SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES", connection);
                 using (SqlDataReader dataReader = cmd.ExecuteReader())
@@ -114,7 +107,7 @@ namespace SqlManagment.Controllers
             serverContent = new()
             {
                 DatabaseContents = databaseContents,
-                ServerName = loginServerName
+                ServerName = serverInfo.Server
             };
             return serverContent;
         }
@@ -131,7 +124,7 @@ namespace SqlManagment.Controllers
             stopwatch.Start();
             try
             {
-                SqlConnection connection = new(@$"Server={ServerName};Database={executeModel.DatabaseName};Trusted_Connection=True;");
+                SqlConnection connection = new(@$"Server={ServerContent.Server};Database={executeModel.DatabaseName};User Id={ServerContent.LoginName};Password={ServerContent.Password};");
                 connection.Open();
                 using SqlDataReader sqlDataReader = new SqlCommand($"SELECT COLUMN_NAME,* FROM INFORMATION_SCHEMA.COLUMNS " +
                             $"WHERE TABLE_NAME = '{executeModel.TableName}' AND TABLE_SCHEMA = 'dbo'", connection).ExecuteReader();
@@ -165,7 +158,7 @@ namespace SqlManagment.Controllers
             ellapsedTime = stopwatch.ElapsedMilliseconds.ToString();
             ViewData["EllapsedTime"] = ellapsedTime;
             ViewData["Data"] = data;
-            ViewData["ServerInfo"] = GetAllDataFromServer(ServerName);
+            ViewData["ServerInfo"] = GetAllDataFromServer(ServerContent);
             return View("Database");
         }
         #endregion
